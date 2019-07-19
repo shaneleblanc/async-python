@@ -15,12 +15,13 @@ def response_hook(resp, *args, **kwargs):
 def count():
     start_time = time.time()
     if 'count' not in storage.keys():
-        storage['count'] = 1
+        storage['count'] = 1  # Set this to 101 to test without refreshing the page 100 times
     else:
         storage['count'] += 1
 
     session = FuturesSession()
-    futures = [session.get(f'https://postman-echo.com/get?x={i}', hooks={'response': response_hook,}) for i in range(storage['count'])]
+    futures = [session.get(f'https://postman-echo.com/get?x={i}',
+                           hooks={'response': response_hook}) for i in range(storage['count'])]
     data = [future.result().json() for future in futures]
 
     response = app.response_class(
