@@ -1,45 +1,40 @@
-from flask import Flask, escape, request, json, session
-from uuid import uuid4  # for generating secret
-import aiohttp
-import asyncio
+from flask import Flask, jsonify
+from flask import session as storage
+from requests_futures.sessions import FuturesSession
+import os, json, time
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = os.urandom(12).hex()
 
 
-async def fetch(url):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            html = await response.read()
-            return {
-                "resp": response,
-                "html": html,
-                "url": url,
-            }
+def response_hook(resp, *args, **kwargs):
+    print('Got response: ', resp.json())
 
 
-@app.route("/")
-async def count():
-    urls = []
-    for x in range(1, 4):
-        urls.append(f'https://postman-echo.com/get?count={x}')
-    futures = [asyncio.ensure_future(fetch(url)) for url in urls]
+@app.route('/count', methods=['GET',])
+def count():
+    start_time = time.time()
+    if 'count' not in storage.keys():
+        storage['count'] = 1
+    else:
+        storage['count'] += 1
 
-    output = ""
+    session = FuturesSession()
+    futures = [session.get(f'https://postman-echo.com/get?x={i}', hooks={'response': response_hook,}) for i in range(storage['count'])]
+    data = []
     for future in futures:
-        try:
-            resp = await future
-        except Exception as error:
-            output += f"Failed: {error}"
-            continue
-        else:
-            data = json.loads(resp['html'].decode())
-            output += json.dumps(data['args'])
-            output += '\n'
+        result = future.result()
+        data.append(json.loads(result.text))
 
-    return output
+    response = app.response_class(
+        response=json.dumps(data),
+        status=200,
+        mimetype='application/json'
+    )
+    end_time = time.time()
+    print("Total time:", end_time - start_time, "seconds")
+    return response, 200
+
 
 if __name__ == '__main__':
-    app.secret_key = str(uuid4())
-    app.config['SESSION_TYPE'] = 'filesystem'
-
     app.run()
