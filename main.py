@@ -11,7 +11,7 @@ def response_hook(resp, *args, **kwargs):
     print('Got response: ', resp.json())
 
 
-@app.route('/count', methods=['GET',])
+@app.route('/count')
 def count():
     start_time = time.time()
     if 'count' not in storage.keys():
@@ -21,10 +21,7 @@ def count():
 
     session = FuturesSession()
     futures = [session.get(f'https://postman-echo.com/get?x={i}', hooks={'response': response_hook,}) for i in range(storage['count'])]
-    data = []
-    for future in futures:
-        result = future.result()
-        data.append(json.loads(result.text))
+    data = [future.result().json() for future in futures]
 
     response = app.response_class(
         response=json.dumps(data),
