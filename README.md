@@ -1,3 +1,5 @@
 # async-python
-Using requests_futures's FuturesSession to make many HTTP requests asynchronously. 
 
+**main.py**: Uses requests_futures's FuturesSession to make many HTTP requests asynchronously. 
+
+**main-quart.py**: Uses asyncio to make HTTP requests asnychronously. 
